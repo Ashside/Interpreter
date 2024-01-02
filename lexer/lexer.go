@@ -31,7 +31,8 @@ func (l *Lexer) readChar() {
 // NextToken 读取下一个token
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token //声明一个token
-	l.skipWhitespace()  //跳过空白符
+
+	l.skipWhitespace() //跳过空白符
 
 	//根据当前字符，判断当前token的类型
 	switch l.ch {
@@ -61,7 +62,7 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal) //判断标识符是否是关键字
 			return tok                                //返回一个标识符token
-		} else if isLetter(l.ch) {
+		} else if isDigit(l.ch) {
 			tok.Literal = l.readNumber()
 			tok.Type = token.INT
 			return tok
