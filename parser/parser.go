@@ -4,22 +4,33 @@ import (
 	"Interp/ast"
 	"Interp/lexer"
 	"Interp/token"
+	"fmt"
 )
 
 type Parser struct {
 	l         *lexer.Lexer //指向lexer
 	curToken  token.Token  //当前token
 	peekToken token.Token  //下一个token
+	errors    []string     //错误信息
 }
 
 func NewParser(l *lexer.Lexer) *Parser {
-	p := &Parser{l: l}
+	p := &Parser{l: l, errors: []string{}} //初始化一个parser
 	//读取两个token，将curToken和peekToken都初始化
 	p.nextToken()
 	p.nextToken()
 	return p
 }
+func (p *Parser) Errors() []string {
+	return p.errors
+}
 
+// peekError 当peekToken不是期望的token时，将错误信息添加到p.errors
+func (p *Parser) peekError(t token.TokenType) {
+	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
+	//将错误信息添加到p.errors
+	p.errors = append(p.errors, msg)
+}
 func (p *Parser) nextToken() {
 	p.curToken = p.peekToken
 	p.peekToken = p.l.NextToken() //读取下一个token
@@ -33,7 +44,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 	program.Statements = []ast.Statement{} //初始化program.Statements，将其置为空
 
 	// 循环解析语句，直到遇到token.EOF
-	for p.curToken.Type != token.EOF {
+	for !p.curTokenIs(token.EOF) {
 		// 解析语句
 		stmt := p.parseStatement()
 		if stmt != nil {
@@ -48,6 +59,9 @@ func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case token.LET: //如果当前token是let，就解析let语句
 		return p.parseLetStatement()
+	case token.RETURN:
+		return p.parseReturnStatement()
+
 	default:
 		return nil
 	}
@@ -77,6 +91,19 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	return stmt
 }
 
+// parseReturnStatement 构造一个ast.ReturnStatement，并将当前词法单元放置到Token字段中
+func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
+	//初始化一个return语句
+	stmt := &ast.ReturnStatement{Token: p.curToken}
+	p.nextToken()
+	//TODO: 跳过表达式，直到遇到分号
+	for !p.curTokenIs(token.SEMICOLON) {
+		p.nextToken()
+
+	}
+	return stmt
+
+}
 func (p *Parser) curTokenIs(t token.TokenType) bool {
 	return p.curToken.Type == t
 }
@@ -92,6 +119,8 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
 		p.nextToken()
 		return true
 	} else {
+		//如果下一个token不是期望的token，就将错误信息添加到p.errors
+		p.peekError(t)
 		return false
 	}
 }

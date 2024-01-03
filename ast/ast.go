@@ -18,7 +18,7 @@ type Program struct {
 	Statements []Statement
 }
 
-// TokenLiteral 返回当前token的字面量，实现了Node接口
+// TokenLiteral 如果当前program中有语句，就返回第一个语句的字面量
 func (p *Program) TokenLiteral() string {
 	// 如果当前program中有语句，就返回第一个语句的字面量
 	if len(p.Statements) > 0 {
@@ -59,4 +59,20 @@ func (i *Identifier) expressionNode() {
 // TokenLiteral 返回当前token的字面量，实现了Node接口
 func (i *Identifier) TokenLiteral() string {
 	return i.Token.Literal
+}
+
+// ReturnStatement return语句
+type ReturnStatement struct {
+	Token       token.Token // token.RETURN 标识符
+	ReturnValue Expression  // 返回值
+}
+
+// statementNode 表示这是一个语句，实现了Statement接口
+func (rs *ReturnStatement) statementNode() {
+
+}
+
+// TokenLiteral 返回当前token的字面量，实现了Node接口
+func (rs *ReturnStatement) TokenLiteral() string {
+	return rs.Token.Literal
 }

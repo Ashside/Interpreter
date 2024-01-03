@@ -8,15 +8,17 @@ import (
 
 func TestLetStatements(t *testing.T) {
 	input := `
-let x = 5;
-let y = 10;
-let foobar = 838383;
+return 5;
+return 10;
+return 993322;
 `
 	//初始化一个lexer
 	l := lexer.NewLexer(input)
 	//初始化一个parser
 	p := NewParser(l)
 	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
 	if program == nil {
 		t.Fatalf("ParseProgram() returned nil")
 	}
@@ -25,18 +27,14 @@ let foobar = 838383;
 		t.Fatalf("program.Statements does not contain 3 statements, got=%d", len(program.Statements))
 	}
 
-	tests := []struct {
-		expectedIdentifier string
-	}{
-		{"x"},
-		{"y"},
-		{"foobar"},
-	}
-
-	for i, tt := range tests {
-		stmt := program.Statements[i]
-		if !testLetStatement(t, stmt, tt.expectedIdentifier) {
-			return
+	for _, stmt := range program.Statements {
+		returnStmt, ok := stmt.(*ast.ReturnStatement)
+		if !ok {
+			t.Errorf("stmt not *ast.ReturnStatement, got=%T", stmt)
+			continue
+		}
+		if returnStmt.TokenLiteral() != "return" {
+			t.Errorf("returnStmt.TokenLiteral not 'return', got=%q", returnStmt.TokenLiteral())
 		}
 	}
 }
@@ -50,7 +48,7 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	}
 
 	//将s转换成*ast.LetStatement类型
-	letStmt, ok := s.(*ast.LetStatement)
+	letStmt, ok := s.(*ast.LetStatement) //类型断言
 	if !ok {
 		t.Errorf("s not *ast.LetStatement, got=%T", s)
 		return false
@@ -69,4 +67,20 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	}
 
 	return true
+}
+
+// checkParserErrors 检查parser的错误，如果有错误，就打印错误信息
+func checkParserErrors(t *testing.T, p *Parser) {
+	//如果p.errors的长度为0，表示没有错误，直接返回
+	if len(p.errors) == 0 {
+		return
+	}
+	//否则就打印错误信息
+	t.Errorf("parser has %d errors", len(p.errors))
+	//遍历p.errors，打印错误信息
+	for _, msg := range p.errors {
+		t.Errorf("parser error: %q", msg)
+	}
+	//测试失败
+	t.FailNow()
 }
