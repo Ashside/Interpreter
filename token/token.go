@@ -34,6 +34,7 @@ var keywords = map[string]TokenType{
 	"let": LET,
 }
 
+// LookupIdent 判断标识符是否是关键字，关键字包括let、fn等
 func LookupIdent(ident string) TokenType {
 	// 如果是关键字，就返回关键字对应的token类型
 	if tok, ok := keywords[ident]; ok {

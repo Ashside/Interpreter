@@ -59,11 +59,11 @@ func (l *Lexer) NextToken() token.Token {
 	default:
 		//如果当前字符是字母或者下划线，就读取标识符
 		if isLetter(l.ch) {
-			tok.Literal = l.readIdentifier()
+			tok.Literal = l.readCharIdent()
 			tok.Type = token.LookupIdent(tok.Literal) //判断标识符是否是关键字
 			return tok                                //返回一个标识符token
 		} else if isDigit(l.ch) {
-			tok.Literal = l.readNumber()
+			tok.Literal = l.readCharIdent()
 			tok.Type = token.INT
 			return tok
 		} else {
@@ -126,4 +126,16 @@ func (l *Lexer) readNumber() string {
 	return l.input[currentPosition:l.position]
 }
 
-// @TODO: 完全可以整合number 和 identifier到一个函数characterIdentifier中
+// @TODO: 完全可以整合number 和 identifier到一个函数readCharIdent中
+// @DONE: 整合完毕
+// readCharIdent 读取标识符和数字
+func (l *Lexer) readCharIdent() string {
+	// 记录当前字符的位置
+	currentPosition := l.position
+	// 如果当前字符是数字或者字母，就一直读取下一个字符
+	for isDigit(l.ch) || isLetter(l.ch) {
+		l.readChar()
+	}
+	// 返回从current_position到l.position的字符串
+	return l.input[currentPosition:l.position]
+}
