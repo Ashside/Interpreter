@@ -14,14 +14,16 @@ const (
 	IDENT = "IDENT" // IDENT 标识量
 	INT   = "INT"   // INT 整型
 
-	ASSIGN   = "=" // ASSIGN 赋值
-	PLUS     = "+" // PLUS 加号
-	MINUS    = "-" // MINUS 减号
-	BANG     = "!" // BANG 感叹号
-	ASTERISK = "*" // ASTERISK 星号
-	SLASH    = "/" // SLASH 斜杠
-	LT       = "<" // LT 小于号
-	GT       = ">" // GT 大于号
+	ASSIGN   = "="  // ASSIGN 赋值
+	PLUS     = "+"  // PLUS 加号
+	MINUS    = "-"  // MINUS 减号
+	BANG     = "!"  // BANG 感叹号
+	ASTERISK = "*"  // ASTERISK 星号
+	SLASH    = "/"  // SLASH 斜杠
+	LT       = "<"  // LT 小于号
+	GT       = ">"  // GT 大于号
+	EQ       = "==" // EQ 等于号
+	NOT_EQ   = "!=" // NOT_EQ 不等于号
 
 	COMMA     = "," // COMMA 逗号
 	SEMICOLON = ";" // SEMICOLON 分号

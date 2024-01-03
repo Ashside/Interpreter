@@ -37,7 +37,16 @@ func (l *Lexer) NextToken() token.Token {
 	//根据当前字符，判断当前token的类型
 	switch l.ch {
 	case '=':
-		tok = newToken(token.ASSIGN, l.ch)
+		//判断下一个字符是否是'='，如果是，就返回一个EQ类型的token，否则就返回一个ASSIGN类型的token
+		//NOTE: 这里没有必要保存当前字符，因为在switch中已经判断了当前字符是'='
+		if l.peekChar() == '=' {
+			l.readChar()
+			literal := "=="
+			tok = token.Token{Type: token.EQ, Literal: literal}
+		} else {
+			tok = newToken(token.ASSIGN, l.ch) //返回一个ASSIGN类型的token
+		}
+		//tok = newToken(token.ASSIGN, l.ch)
 	case ';':
 		tok = newToken(token.SEMICOLON, l.ch)
 	case '(':
@@ -51,7 +60,14 @@ func (l *Lexer) NextToken() token.Token {
 	case '-':
 		tok = newToken(token.MINUS, l.ch)
 	case '!':
-		tok = newToken(token.BANG, l.ch)
+		//判断下一个字符是否是'='，如果是，就返回一个NOT_EQ类型的token，否则就返回一个BANG类型的token
+		if l.peekChar() == '=' {
+			l.readChar()
+			literal := "!="
+			tok = token.Token{Type: token.NOT_EQ, Literal: literal}
+		} else {
+			tok = newToken(token.BANG, l.ch) //返回一个BANG类型的token
+		}
 	case '*':
 		tok = newToken(token.ASTERISK, l.ch)
 	case '/':
@@ -149,4 +165,15 @@ func (l *Lexer) readCharIdent() string {
 	}
 	// 返回从current_position到l.position的字符串
 	return l.input[currentPosition:l.position]
+}
+
+// peekChar 返回当前字符的下一个字符，但不会改变l.ch的值
+func (l *Lexer) peekChar() byte {
+	//如果当前字符的下一个字符的位置大于等于input的长度，就返回0，表示到达了文件末尾
+	if l.readPosition >= len(l.input) {
+		return 0
+	} else {
+		//否则就返回当前字符的下一个字符
+		return l.input[l.readPosition]
+	}
 }
