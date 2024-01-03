@@ -23,7 +23,7 @@ func TestNextToken(t *testing.T) {
 		{token.EOF, ""},
 	}
 
-	l := New(input)
+	l := NewLexer(input)
 	for i, tt := range tests {
 		tok := l.NextToken()
 
@@ -46,6 +46,14 @@ let add = fn(x,y){
 	x + y;
 };
 let result = add(five,ten);
+!-/*5;
+5 < 10 > 5;
+
+if (5 < 10){
+	return true;
+}else{
+	return false;
+}
 `
 	tests := []struct {
 		expectedType    token.TokenType
@@ -85,11 +93,40 @@ let result = add(five,ten);
 		{token.IDENT, "five"},
 		{token.COMMA, ","}, //,
 		{token.IDENT, "ten"},
-		{token.RPAREN, ")"},    //)
-		{token.SEMICOLON, ";"}, //;
+		{token.RPAREN, ")"},      //)
+		{token.SEMICOLON, ";"},   //;
+		{token.BANG, "!"},        //!
+		{token.MINUS, "-"},       //-
+		{token.SLASH, "/"},       ///
+		{token.ASTERISK, "*"},    //*
+		{token.INT, "5"},         //5
+		{token.SEMICOLON, ";"},   //;
+		{token.INT, "5"},         //5
+		{token.LT, "<"},          //<
+		{token.INT, "10"},        //10
+		{token.GT, ">"},          //>
+		{token.INT, "5"},         //5
+		{token.SEMICOLON, ";"},   //;
+		{token.IF, "if"},         //if
+		{token.LPAREN, "("},      //(
+		{token.INT, "5"},         //5
+		{token.LT, "<"},          //<
+		{token.INT, "10"},        //10
+		{token.RPAREN, ")"},      //)
+		{token.LBRACE, "{"},      //{
+		{token.RETURN, "return"}, //return
+		{token.TRUE, "true"},     //true
+		{token.SEMICOLON, ";"},   //;
+		{token.RBRACE, "}"},      //}
+		{token.ELSE, "else"},     //else
+		{token.LBRACE, "{"},      //{
+		{token.RETURN, "return"}, //return
+		{token.FALSE, "false"},   //false
+		{token.SEMICOLON, ";"},   //;
+		{token.RBRACE, "}"},      //}
 		{token.EOF, ""},
 	}
-	l := New(input)
+	l := NewLexer(input)
 	for i, tt := range tests {
 		tok := l.NextToken()
 

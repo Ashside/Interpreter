@@ -9,8 +9,8 @@ type Lexer struct {
 	ch           byte //当前字符
 }
 
-// New 创建一个新的Lexer
-func New(input string) *Lexer {
+// NewLexer 创建一个新的Lexer
+func NewLexer(input string) *Lexer {
 	l := &Lexer{input: input} //初始化一个Lexer l，将input赋值给l.input
 	l.readChar()              //初始化l.ch、l.position、l.readPosition
 	return l
@@ -48,6 +48,18 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.COMMA, l.ch)
 	case '+':
 		tok = newToken(token.PLUS, l.ch)
+	case '-':
+		tok = newToken(token.MINUS, l.ch)
+	case '!':
+		tok = newToken(token.BANG, l.ch)
+	case '*':
+		tok = newToken(token.ASTERISK, l.ch)
+	case '/':
+		tok = newToken(token.SLASH, l.ch)
+	case '<':
+		tok = newToken(token.LT, l.ch)
+	case '>':
+		tok = newToken(token.GT, l.ch)
 	case '{':
 		tok = newToken(token.LBRACE, l.ch)
 	case '}':
@@ -126,8 +138,7 @@ func (l *Lexer) readNumber() string {
 	return l.input[currentPosition:l.position]
 }
 
-// @TODO: 完全可以整合number 和 identifier到一个函数readCharIdent中
-// @DONE: 整合完毕
+// 完全可以整合number 和 identifier到一个函数readCharIdent中
 // readCharIdent 读取标识符和数字
 func (l *Lexer) readCharIdent() string {
 	// 记录当前字符的位置

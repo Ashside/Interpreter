@@ -14,8 +14,14 @@ const (
 	IDENT = "IDENT" // IDENT 标识量
 	INT   = "INT"   // INT 整型
 
-	ASSIGN = "=" // ASSIGN 赋值
-	PLUS   = "+" // PLUS 加号
+	ASSIGN   = "=" // ASSIGN 赋值
+	PLUS     = "+" // PLUS 加号
+	MINUS    = "-" // MINUS 减号
+	BANG     = "!" // BANG 感叹号
+	ASTERISK = "*" // ASTERISK 星号
+	SLASH    = "/" // SLASH 斜杠
+	LT       = "<" // LT 小于号
+	GT       = ">" // GT 大于号
 
 	COMMA     = "," // COMMA 逗号
 	SEMICOLON = ";" // SEMICOLON 分号
@@ -26,12 +32,21 @@ const (
 
 	FUNCTION = "FUNCTION" // FUNCTION 函数
 	LET      = "LET"      // LET 标识量
-
+	IF       = "IF"       // IF
+	ELSE     = "ELSE"     // ELSE
+	RETURN   = "RETURN"   // RETURN
+	TRUE     = "TRUE"     // TRUE
+	FALSE    = "FALSE"    // FALSE
 )
 
 var keywords = map[string]TokenType{
-	"fn":  FUNCTION,
-	"let": LET,
+	"fn":     FUNCTION,
+	"let":    LET,
+	"if":     IF,
+	"else":   ELSE,
+	"return": RETURN,
+	"true":   TRUE,
+	"false":  FALSE,
 }
 
 // LookupIdent 判断标识符是否是关键字，关键字包括let、fn等
