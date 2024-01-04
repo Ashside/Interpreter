@@ -1,9 +1,13 @@
 package ast
 
-import "Interp/token"
+import (
+	"Interp/token"
+	"bytes"
+)
 
 type Node interface {
 	TokenLiteral() string
+	String() string
 }
 type Statement interface {
 	Node
@@ -14,6 +18,7 @@ type Expression interface {
 	expressionNode()
 }
 
+// Program 根节点
 type Program struct {
 	Statements []Statement
 }
@@ -26,6 +31,17 @@ func (p *Program) TokenLiteral() string {
 	} else {
 		return ""
 	}
+}
+
+// String 返回当前program中所有语句的字符串，实际工作委托给statement的String方法
+func (p *Program) String() string {
+	var out bytes.Buffer //声明一个bytes.Buffer
+	//遍历p.Statements，将每个语句的字符串拼接起来
+	for _, s := range p.Statements {
+		out.WriteString(s.String())
+	}
+
+	return out.String()
 }
 
 // LetStatement let语句
@@ -45,6 +61,20 @@ func (ls *LetStatement) TokenLiteral() string {
 	return ls.Token.Literal
 }
 
+// String 返回当前let语句的字符串
+func (ls *LetStatement) String() string {
+	var out bytes.Buffer //声明一个bytes.Buffer
+	//拼接字符串
+	out.WriteString(ls.TokenLiteral() + " ") //let
+	out.WriteString(ls.Name.String())        //标识符
+	out.WriteString(" = ")                   // =
+	if ls.Value != nil {
+		out.WriteString(ls.Value.String()) //表达式
+	}
+	out.WriteString(";") //分号
+	return out.String()
+}
+
 // Identifier 标识符
 type Identifier struct {
 	Token token.Token // token.IDENT 标识符
@@ -61,6 +91,10 @@ func (i *Identifier) TokenLiteral() string {
 	return i.Token.Literal
 }
 
+func (i *Identifier) String() string {
+	return i.Value
+}
+
 // ReturnStatement return语句
 type ReturnStatement struct {
 	Token       token.Token // token.RETURN 标识符
@@ -75,4 +109,39 @@ func (rs *ReturnStatement) statementNode() {
 // TokenLiteral 返回当前token的字面量，实现了Node接口
 func (rs *ReturnStatement) TokenLiteral() string {
 	return rs.Token.Literal
+}
+
+// String 返回当前return语句的字符串
+func (rs *ReturnStatement) String() string {
+	var out bytes.Buffer //声明一个bytes.Buffer
+	//拼接字符串
+	out.WriteString(rs.TokenLiteral() + " ") //return
+	if rs.ReturnValue != nil {
+		out.WriteString(rs.ReturnValue.String()) //返回值
+	}
+	out.WriteString(";") //分号
+	return out.String()
+}
+
+// ExpressionStatement 表达式语句
+type ExpressionStatement struct {
+	Token      token.Token // 表达式的第一个token
+	Expression Expression
+}
+
+func (es *ExpressionStatement) statementNode() {
+
+}
+
+// TokenLiteral 返回当前token的字面量，实现了Node接口
+func (es *ExpressionStatement) TokenLiteral() string {
+	return es.Token.Literal
+}
+
+// String 返回当前表达式语句的字符串
+func (es *ExpressionStatement) String() string {
+	if es.Expression != nil {
+		return es.Expression.String()
+	}
+	return ""
 }
