@@ -7,6 +7,8 @@ import (
 )
 
 func TestLetStatements(t *testing.T) {
+	t.Log("TestLetStatements Called")
+
 	input := `
 return 5;
 return 10;
@@ -41,6 +43,8 @@ return 993322;
 
 // testLetStatement 测试let语句
 func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
+	t.Log("testLetStatement Called")
+
 	//判断当前语句是否是let语句
 	if s.TokenLiteral() != "let" {
 		t.Errorf("s.TokenLiteral not 'let', got=%q", s.TokenLiteral())
@@ -83,4 +87,43 @@ func checkParserErrors(t *testing.T, p *Parser) {
 	}
 	//测试失败
 	t.FailNow()
+}
+
+func TestIdentifierExpression(t *testing.T) {
+	t.Log("TestIdentifierExpression Called")
+	input := "foobar;"
+	//初始化一个lexer
+	l := lexer.NewLexer(input)
+	//初始化一个parser
+	//首先用语法分析器检查是否有错误
+	p := NewParser(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	//解析的program只能有一条语句
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain 1 statements, got=%d", len(program.Statements))
+	}
+
+	//检查这一条唯一的语句是否为*ast.ExpressionStatement类型
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not *ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+
+	//检查这条语句的Expression是否为*ast.Identifier类型
+	ident, ok := stmt.Expression.(*ast.Identifier)
+	if !ok {
+		t.Fatalf("exp not *ast.Identifier, got=%T", stmt.Expression)
+	}
+
+	//判断ident.Value是否等于foobar
+	if ident.Value != "foobar" {
+		t.Errorf("ident.Value not %s, got=%s", "foobar", ident.Value)
+	}
+
+	//判断ident.TokenLiteral()是否等于foobar
+	if ident.TokenLiteral() != "foobar" {
+		t.Errorf("ident.TokenLiteral not %s, got=%s", "foobar", ident.TokenLiteral())
+	}
 }
