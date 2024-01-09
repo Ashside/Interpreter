@@ -31,6 +31,9 @@ const (
 
 )
 
+// precedences 定义了每个运算符的优先级，表示了运算符右约束能力。
+// 当右约束能力达到最大值，那么当前解析的结果，即分配给leftExp的值就不会传递给下一个运算符关联的infixParseFn
+// 也就是说，leftExp不会成为左子节点，因为此时parseExpression函数中for循环的条件为false
 var precedences = map[token.TokenType]int{
 	token.EQ:       EQUALS,
 	token.NOT_EQ:   EQUALS,
@@ -146,6 +149,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 }
 
 func (p *Parser) parseExpressionStatement() ast.Statement {
+	defer untrace(trace("parseExpressionStatement: " + p.curToken.Literal))
 	stmt := &ast.ExpressionStatement{Token: p.curToken} //初始化一个表达式语句
 	stmt.Expression = p.parseExpression(LOWEST)         //解析表达式,LOWEST表示最低优先级
 	//如果下一个token是分号，就读取下一个token
@@ -157,8 +161,8 @@ func (p *Parser) parseExpressionStatement() ast.Statement {
 
 // parseExpression 解析表达式
 // NOTE: version 1 检查前缀位置受否有与p.curToken.Type对应的解析函数，如果有就调用该函数并返回，否则返回nil
-
 func (p *Parser) parseExpression(precedence int) ast.Expression {
+	defer untrace(trace("parseExpression: " + p.curToken.Literal))
 	prefix := p.prefixParseFns[p.curToken.Type]
 	if prefix == nil {
 		p.noPrefixParseFnError(p.curToken.Type)
@@ -167,12 +171,13 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	leftExp := prefix()
 	// 该方法尝试为下一个词法单元查找infixParseFns，如果找到了这个函数，就用prefixParseFn返回的表达式作为参数调用这个函数。
 	// 循环重复执行，直到遇见优先级更高的词法单元为止
+	// 在前一次读入操作符，这一次读到数字的时候，将不会进入循环
 	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
 			return leftExp
 		}
-		p.nextToken()
+		p.nextToken() // 因为在infix中需要用到p.curToken，所以这里先移动词法单元
 		leftExp = infix(leftExp)
 	}
 	return leftExp
@@ -188,6 +193,7 @@ func (p *Parser) parseIdentifier() ast.Expression {
 
 // parseIntegerLiteral 调用了strconv.ParseInt，将p.curToken的字面值赋给Expression(IntegerLiteral)的value字段
 func (p *Parser) parseIntegerLiteral() ast.Expression {
+	defer untrace(trace("parseIntegerLiteral: " + p.curToken.Literal))
 	lit := &ast.IntegerLiteral{Token: p.curToken}
 
 	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
@@ -202,6 +208,7 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 
 // parsePrefixExpression 会调用p.nextToken()来前移词法单元，开始的时候p.curToken是前缀运算符，返回时指向前缀表达式的操作数
 func (p *Parser) parsePrefixExpression() ast.Expression {
+	defer untrace(trace("parsePrefixExpression: " + p.curToken.Literal))
 	expression := &ast.PrefixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
@@ -211,15 +218,19 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 	expression.Right = p.parseExpression(PREFIX) //按照前缀优先级解析
 	return expression
 }
+
+// parseInfixExpression 会调用p.nextToken()来前移词法单元，开始的时候p.curToken是中缀运算符，返回时指向中缀表达式的右操作数
+// 参数left是中缀表达式的左操作数
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+	defer untrace(trace("parseInfixExpression: " + p.curToken.Literal))
 	expression := &ast.InfixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
 		Left:     left,
 	}
 	precedence := p.curPrecedence()                  //获取当前优先级
-	p.nextToken()                                    //移动词法单元
-	expression.Right = p.parseExpression(precedence) //按照当前优先级解析
+	p.nextToken()                                    //移动词法单元，此时p.curToken指向操作符下一个词法单元
+	expression.Right = p.parseExpression(precedence) //按照当前优先级解析，递归调用parseExpression
 	return expression
 }
 
