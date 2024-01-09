@@ -39,6 +39,9 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
+	p.registerPrefix(token.BANG, p.parsePrefixExpression)
+	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
+
 	return p
 }
 func (p *Parser) Errors() []string {
@@ -138,6 +141,7 @@ func (p *Parser) parseExpressionStatement() ast.Statement {
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.curToken.Type]
 	if prefix == nil {
+		p.noPrefixParseFnError(p.curToken.Type)
 		return nil
 	}
 	leftExp := prefix()
@@ -152,7 +156,7 @@ func (p *Parser) parseIdentifier() ast.Expression {
 	}
 }
 
-// parseIntegerLiteral 调用了strconv.ParseInt，将p.curToken的
+// parseIntegerLiteral 调用了strconv.ParseInt，将p.curToken的字面值赋给Expression(IntegerLiteral)的value字段
 func (p *Parser) parseIntegerLiteral() ast.Expression {
 	lit := &ast.IntegerLiteral{Token: p.curToken}
 
@@ -164,6 +168,18 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	}
 	lit.Value = value
 	return lit
+}
+
+// parsePrefixExpression 会调用p.nextToken()来前移词法单元，开始的时候p.curToken是前缀运算符，返回时指向前缀表达式的操作数
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	expression := &ast.PrefixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+		Right:    nil,
+	}
+	p.nextToken()                                //移动词法单元
+	expression.Right = p.parseExpression(PREFIX) //按照前缀优先级解析
+	return expression
 }
 
 // curTokenIs 判断当前token是否是期望的token
@@ -200,4 +216,9 @@ func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
 }
 func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
 	p.infixParseFns[tokenType] = fn
+}
+func (p *Parser) noPrefixParseFnError(t token.TokenType) {
+	msg := fmt.Sprintf("no prefix parse function for %s found", t)
+	p.errors = append(p.errors, msg)
+
 }
