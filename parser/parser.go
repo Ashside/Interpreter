@@ -31,6 +31,17 @@ const (
 
 )
 
+var precedences = map[token.TokenType]int{
+	token.EQ:       EQUALS,
+	token.NOT_EQ:   EQUALS,
+	token.LT:       LESSGREATER,
+	token.GT:       LESSGREATER,
+	token.PLUS:     SUM,
+	token.MINUS:    SUM,
+	token.SLASH:    PRODUCT,
+	token.ASTERISK: PRODUCT,
+}
+
 func NewParser(l *lexer.Lexer) *Parser {
 	p := &Parser{l: l, errors: []string{}} //初始化一个parser
 	//读取两个token，将curToken和peekToken都初始化
@@ -41,7 +52,15 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
-
+	p.infixParseFns = make(map[token.TokenType]infixParseFn)
+	p.registerInfix(token.PLUS, p.parseInfixExpression)
+	p.registerInfix(token.MINUS, p.parseInfixExpression)
+	p.registerInfix(token.SLASH, p.parseInfixExpression)
+	p.registerInfix(token.ASTERISK, p.parseInfixExpression)
+	p.registerInfix(token.EQ, p.parseInfixExpression)
+	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
+	p.registerInfix(token.LT, p.parseInfixExpression)
+	p.registerInfix(token.GT, p.parseInfixExpression)
 	return p
 }
 func (p *Parser) Errors() []string {
@@ -138,6 +157,7 @@ func (p *Parser) parseExpressionStatement() ast.Statement {
 
 // parseExpression 解析表达式
 // NOTE: version 1 检查前缀位置受否有与p.curToken.Type对应的解析函数，如果有就调用该函数并返回，否则返回nil
+
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.curToken.Type]
 	if prefix == nil {
@@ -145,6 +165,16 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		return nil
 	}
 	leftExp := prefix()
+	// 该方法尝试为下一个词法单元查找infixParseFns，如果找到了这个函数，就用prefixParseFn返回的表达式作为参数调用这个函数。
+	// 循环重复执行，直到遇见优先级更高的词法单元为止
+	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
+		infix := p.infixParseFns[p.peekToken.Type]
+		if infix == nil {
+			return leftExp
+		}
+		p.nextToken()
+		leftExp = infix(leftExp)
+	}
 	return leftExp
 }
 
@@ -179,6 +209,17 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 	}
 	p.nextToken()                                //移动词法单元
 	expression.Right = p.parseExpression(PREFIX) //按照前缀优先级解析
+	return expression
+}
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+	expression := &ast.InfixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+		Left:     left,
+	}
+	precedence := p.curPrecedence()                  //获取当前优先级
+	p.nextToken()                                    //移动词法单元
+	expression.Right = p.parseExpression(precedence) //按照当前优先级解析
 	return expression
 }
 
@@ -221,4 +262,18 @@ func (p *Parser) noPrefixParseFnError(t token.TokenType) {
 	msg := fmt.Sprintf("no prefix parse function for %s found", t)
 	p.errors = append(p.errors, msg)
 
+}
+
+func (p *Parser) peekPrecedence() int {
+	if p, ok := precedences[p.peekToken.Type]; ok {
+		return p
+	}
+	return LOWEST // 如果precedences没有对应的优先级，就使用默认的最低优先级
+}
+
+func (p *Parser) curPrecedence() int {
+	if p, ok := precedences[p.curToken.Type]; ok {
+		return p
+	}
+	return LOWEST // 如果precedences没有对应的优先级，就使用默认的最低优先级
 }
