@@ -55,6 +55,9 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
+	p.registerPrefix(token.TRUE, p.parseBoolean)
+	p.registerPrefix(token.FALSE, p.parseBoolean)
+	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
 	p.registerInfix(token.MINUS, p.parseInfixExpression)
@@ -117,7 +120,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	stmt := &ast.LetStatement{Token: p.curToken}
 
 	//判断下一个token是否是标识符
-	if !p.expectPeek(token.IDENT) {
+	if !p.expectPeekMove(token.IDENT) {
 		return nil
 	}
 
@@ -125,7 +128,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 
 	//判断下一个token是否是等号
-	if !p.expectPeek(token.ASSIGN) {
+	if !p.expectPeekMove(token.ASSIGN) {
 		return nil
 	}
 
@@ -244,8 +247,8 @@ func (p *Parser) peekTokenIs(t token.TokenType) bool {
 	return p.peekToken.Type == t
 }
 
-// expectPeek 判断下一个token是否是期望的token t，如果是就读取下一个token
-func (p *Parser) expectPeek(t token.TokenType) bool {
+// expectPeekMove 判断下一个token是否是期望的token t，如果是就读取下一个token
+func (p *Parser) expectPeekMove(t token.TokenType) bool {
 	//如果下一个token是期望的token，就读取下一个token
 	if p.peekTokenIs(t) {
 		p.nextToken()
@@ -287,4 +290,20 @@ func (p *Parser) curPrecedence() int {
 		return p
 	}
 	return LOWEST // 如果precedences没有对应的优先级，就使用默认的最低优先级
+}
+
+func (p *Parser) parseBoolean() ast.Expression {
+	return &ast.Boolean{
+		Token: p.curToken,
+		Value: p.curTokenIs(token.TRUE),
+	}
+}
+
+func (p *Parser) parseGroupedExpression() ast.Expression {
+	p.nextToken()
+	exp := p.parseExpression(LOWEST)
+	if !p.expectPeekMove(token.RPAREN) {
+		return nil
+	}
+	return exp
 }
