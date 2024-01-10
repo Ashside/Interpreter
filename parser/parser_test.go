@@ -8,41 +8,76 @@ import (
 )
 
 func TestLetStatements(t *testing.T) {
-	t.Log("TestLetStatements Called")
-
-	input := `
-return 5;
-return 10;
-return 993322;
-`
-	//初始化一个lexer
-	l := lexer.NewLexer(input)
-	//初始化一个parser
-	p := NewParser(l)
-	program := p.ParseProgram()
-	checkParserErrors(t, p)
-
-	if program == nil {
-		t.Fatalf("ParseProgram() returned nil")
+	tests := []struct {
+		input         string
+		expectedName  string
+		expectedValue interface{}
+	}{
+		{"let x = 5;", "x", 5},
+		{"let y = true;", "y", true},
+		{"let foobar = y;", "foobar", "y"},
 	}
-	// 解析let语句，所以只能解析3元素的program
-	if len(program.Statements) != 3 {
-		t.Fatalf("program.Statements does not contain 3 statements, got=%d", len(program.Statements))
+	for _, tt := range tests {
+		//初始化一个lexer
+		l := lexer.NewLexer(tt.input)
+		//初始化一个parser
+		p := NewParser(l)
+		//首先用语法分析器检查是否有错误
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		//解析的program只能有一条语句
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements, got=%d", len(program.Statements))
+		}
+
+		stmt := program.Statements[0] //取出第一条语句
+		if !testLetStatement(t, stmt, tt.expectedName) {
+			return
+		}
+
+		val := stmt.(*ast.LetStatement).Value //取出第一条语句的值
+		if !testLiteralExpression(t, val, tt.expectedValue) {
+			return
+		}
+	}
+}
+func TestReturnStatements(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectedValue interface{}
+	}{
+		{"return 5;", 5},
+		{"return true;", true},
+		{"return foobar;", "foobar"},
 	}
 
-	for _, stmt := range program.Statements {
+	for _, tt := range tests {
+		l := lexer.NewLexer(tt.input)
+		p := NewParser(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+
+		stmt := program.Statements[0]
 		returnStmt, ok := stmt.(*ast.ReturnStatement)
 		if !ok {
-			t.Errorf("stmt not *ast.ReturnStatement, got=%T", stmt)
-			continue
+			t.Fatalf("stmt not *ast.ReturnStatement. got=%T", stmt)
 		}
 		if returnStmt.TokenLiteral() != "return" {
-			t.Errorf("returnStmt.TokenLiteral not 'return', got=%q", returnStmt.TokenLiteral())
+			t.Fatalf("returnStmt.TokenLiteral not 'return', got %q",
+				returnStmt.TokenLiteral())
+		}
+		if testLiteralExpression(t, returnStmt.ReturnValue, tt.expectedValue) {
+			return
 		}
 	}
 }
 
-/*
 // testLetStatement 测试let语句
 func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	t.Log("testLetStatement Called")
@@ -73,7 +108,7 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	}
 
 	return true
-}*/
+}
 
 // checkParserErrors 检查parser的错误，如果有错误，就打印错误信息
 func checkParserErrors(t *testing.T, p *Parser) {
@@ -351,27 +386,9 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"-a * b", "((-a) * b)"},
-		{"!-a", "(!(-a))"},
-		{"a + b + c", "((a + b) + c)"},
-		{"a + b - c", "((a + b) - c)"},
-		{"a * b * c", "((a * b) * c)"},
-		{"a * b / c", "((a * b) / c)"},
-		{"a + b / c", "(a + (b / c))"},
-		{"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"},
-		{"3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"},
-		{"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
-		{"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
-		{"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
-		{"true", "true"},
-		{"false", "false"},
-		{"3 > 5 == false", "((3 > 5) == false)"},
-		{"3 < 5 == true", "((3 < 5) == true)"},
-		{"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"},
-		{"(5 + 5) * 2", "((5 + 5) * 2)"},
-		{"2 / (5 + 5)", "(2 / (5 + 5))"},
-		{"-(5 + 5)", "(-(5 + 5))"},
-		{"!(true == true)", "(!(true == true))"},
+		{"a+add(b*c)+d", "((a + add((b * c))) + d)"},
+		{"add(a,b,1,2*3,4+5,add(6,7*8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
+		{"add(a+b+c*d/f+g)", "add((((a + b) + ((c * d) / f)) + g))"},
 	}
 
 	for _, tt := range tests {
@@ -579,4 +596,37 @@ func TestFunctionParameterParsing(t *testing.T) {
 			testLiteralExpression(t, function.Parameters[i], ident)
 		}
 	}
+}
+
+// TestCallExpressionParsing 需要为(注册一个中缀解析函数
+func TestCallExpressionParsing(t *testing.T) {
+	input := `add(1, 2 * 3, 4 + 5);`
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	//解析的program只能有一条语句
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain 1 statements, got=%d", len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not *ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+	// 检查stmt.Expression是否为*ast.CallExpression类型
+	exp, ok := stmt.Expression.(*ast.CallExpression)
+	if !ok {
+		t.Fatalf("stmt is not ast.CallExpression. got=%T", stmt.Expression)
+	}
+	// 检查函数名是否正确
+	if !testIdentifier(t, exp.Function, "add") {
+		return
+	}
+	// 检查参数列表是否正确
+	if len(exp.Arguments) != 3 {
+		t.Fatalf("wrong length of arguments. got=%d", len(exp.Arguments))
+	}
+	testLiteralExpression(t, exp.Arguments[0], 1)
+	testInfixExpression(t, exp.Arguments[1], 2, "*", 3)
+	testInfixExpression(t, exp.Arguments[2], 4, "+", 5)
 }

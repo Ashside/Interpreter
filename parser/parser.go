@@ -43,6 +43,7 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.SLASH:    PRODUCT,
 	token.ASTERISK: PRODUCT,
+	token.LPAREN:   CALL,
 }
 
 func NewParser(l *lexer.Lexer) *Parser {
@@ -69,6 +70,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
 	p.registerInfix(token.LT, p.parseInfixExpression)
 	p.registerInfix(token.GT, p.parseInfixExpression)
+	p.registerInfix(token.LPAREN, p.parseCallExpression)
 	return p
 }
 func (p *Parser) Errors() []string {
@@ -133,8 +135,9 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	if !p.expectPeekMove(token.ASSIGN) {
 		return nil
 	}
+	p.nextToken()
+	stmt.Value = p.parseExpression(LOWEST)
 
-	//TODO: 跳过表达式，直到遇到分号
 	for !p.curTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
@@ -146,7 +149,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	//初始化一个return语句
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 	p.nextToken()
-	//TODO: 跳过表达式，直到遇到分号
+	stmt.ReturnValue = p.parseExpression(LOWEST)
 	for !p.curTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
@@ -398,4 +401,35 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 		return nil
 	}
 	return idts
+}
+
+func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
+	exp := &ast.CallExpression{
+		Function:  function,
+		Arguments: nil,
+		Token:     p.curToken,
+	}
+	exp.Arguments = p.parseCallArguments()
+	return exp
+}
+
+func (p *Parser) parseCallArguments() []ast.Expression {
+	var args []ast.Expression
+	if p.peekTokenIs(token.RPAREN) {
+		p.nextToken()
+		return args
+	}
+	p.nextToken()
+	args = append(args, p.parseExpression(LOWEST))
+
+	for p.peekTokenIs(token.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		args = append(args, p.parseExpression(LOWEST))
+	}
+
+	if !p.expectPeekMove(token.RPAREN) {
+		return nil
+	}
+	return args
 }
