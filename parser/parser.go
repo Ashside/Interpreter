@@ -59,6 +59,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(token.IF, p.parseIfExpression)
+	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
 	p.registerInfix(token.MINUS, p.parseInfixExpression)
@@ -350,4 +351,51 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 		p.nextToken()
 	}
 	return block
+}
+
+func (p *Parser) parseFunctionLiteral() ast.Expression {
+	lit := &ast.FunctionLiteral{
+		Token:      p.curToken,
+		Parameters: nil,
+		Body:       nil,
+	}
+	if !p.expectPeekMove(token.LPAREN) {
+		return nil
+	}
+	lit.Parameters = p.parseFunctionParameters()
+
+	if !p.expectPeekMove(token.LBRACE) {
+		return nil
+	}
+	lit.Body = p.parseBlockStatement()
+	return lit
+}
+
+// parseFunctionParameters 进入函数时，p.cur指向(
+func (p *Parser) parseFunctionParameters() []*ast.Identifier {
+	var idts []*ast.Identifier
+	//如果没有参数
+	if p.peekTokenIs(token.RPAREN) {
+		p.nextToken() // 再右移一个词法单元
+		return idts
+	}
+	p.nextToken() //指向第一个参数
+	ident := &ast.Identifier{
+		Token: p.curToken,
+		Value: p.curToken.Literal,
+	}
+	idts = append(idts, ident)
+	for p.peekTokenIs(token.COMMA) {
+		p.nextToken() //指向逗号
+		p.nextToken() //指向下一个参数
+		ident := &ast.Identifier{
+			Token: p.curToken,
+			Value: p.curToken.Literal,
+		}
+		idts = append(idts, ident)
+	}
+	if !p.expectPeekMove(token.RPAREN) {
+		return nil
+	}
+	return idts
 }
