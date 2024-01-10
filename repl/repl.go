@@ -2,40 +2,42 @@ package repl
 
 import (
 	"Interp/lexer"
-	"Interp/token"
+	"Interp/parser"
 	"bufio"
 	"fmt"
 	"io"
 )
 
-const PROMPT = ">> " //提示符
+const PROMPT = ">> "
 
 func Start(in io.Reader, out io.Writer) {
-	scanner := bufio.NewScanner(in) //创建一个scanner，用于读取输入
-	//NOTE: 这里的scanner是一个指针，所以在调用Scan()方法时，会改变scanner的值
+	scanner := bufio.NewScanner(in)
 
-	//死循环，不断的读取输入
 	for {
-		//打印提示符
-		_, err := fmt.Fprintf(out, PROMPT)
-		if err != nil {
-			return
-		}
-		//读取输入
+		fmt.Fprintf(out, PROMPT)
 		scanned := scanner.Scan()
-		//如果读取失败，就退出循环
 		if !scanned {
 			return
 		}
 
-		line := scanner.Text()    //获取输入的内容
-		l := lexer.NewLexer(line) //创建一个lexer，用于解析输入
+		line := scanner.Text()
+		l := lexer.NewLexer(line)
+		p := parser.NewParser(l)
 
-		for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
-			_, err := fmt.Fprintf(out, "%+v\n", tok) //%+v表示打印结构体时会添加字段名
-			if err != nil {
-				return
-			}
+		program := p.ParseProgram()
+		if len(p.Errors()) != 0 {
+			printParserErrors(out, p.Errors())
+			continue
 		}
+
+		io.WriteString(out, program.String())
+		io.WriteString(out, "\n")
+	}
+}
+
+func printParserErrors(out io.Writer, errors []string) {
+	io.WriteString(out, " parser errors:\n")
+	for _, msg := range errors {
+		io.WriteString(out, "\t"+msg+"\n")
 	}
 }
