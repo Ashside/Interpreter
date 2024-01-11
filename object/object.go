@@ -1,7 +1,10 @@
 package object
 
 import (
+	"Interp/ast"
+	"bytes"
 	"fmt"
+	"strings"
 )
 
 type ObjectType string
@@ -19,6 +22,8 @@ const (
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
 
 	ERROR_OBJ = "ERROR"
+
+	FUNCTION_OBJ = "FUNCTION"
 )
 
 // Integer 每当在源代码中遇到整数字面值时，需要先转换为ast.IntegerLiteral。在对该节点求值时，再将其转换为Object.Integer
@@ -79,4 +84,30 @@ func (e *Error) Type() ObjectType {
 
 func (e *Error) Inspect() string {
 	return "ERROR: " + e.Message
+}
+
+type Function struct {
+	Parameters []*ast.Identifier
+	Body       *ast.BlockStatement
+	Env        *Environment
+}
+
+func (f *Function) Type() ObjectType {
+	return FUNCTION_OBJ
+}
+
+func (f *Function) Inspect() string {
+	var out bytes.Buffer
+	var params []string
+	for _, p := range f.Parameters {
+		params = append(params, p.String())
+
+	}
+	out.WriteString("fn")
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(") {\n")
+	out.WriteString(f.Body.String())
+	out.WriteString("\n}")
+	return out.String()
 }
