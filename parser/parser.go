@@ -137,7 +137,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	p.nextToken()
 	stmt.Value = p.parseExpression(LOWEST)
 
-	for p.curTokenIs(token.SEMICOLON) {
+	for p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
 	return stmt
@@ -149,14 +149,14 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 	p.nextToken()
 	stmt.ReturnValue = p.parseExpression(LOWEST)
-	for p.curTokenIs(token.SEMICOLON) {
+	for p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
 	return stmt
 }
 
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
-	defer untrace(trace("parseExpressionStatement"))
+	//defer untrace(trace("parseExpressionStatement"))
 	stmt := &ast.ExpressionStatement{Token: p.curToken} //初始化一个表达式语句
 	stmt.Expression = p.parseExpression(LOWEST)         //解析表达式,LOWEST表示最低优先级
 	//如果下一个token是分号，就读取下一个token
@@ -169,7 +169,7 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 // parseExpression 解析表达式
 // NOTE: version 1 检查前缀位置受否有与p.curToken.Type对应的解析函数，如果有就调用该函数并返回，否则返回nil
 func (p *Parser) parseExpression(precedence int) ast.Expression {
-	defer untrace(trace("parseExpression"))
+	//defer untrace(trace("parseExpression"))
 	prefix := p.prefixParseFns[p.curToken.Type]
 	if prefix == nil {
 		p.noPrefixParseFnError(p.curToken.Type)
@@ -200,7 +200,7 @@ func (p *Parser) parseIdentifier() ast.Expression {
 
 // parseIntegerLiteral 调用了strconv.ParseInt，将p.curToken的字面值赋给Expression(IntegerLiteral)的value字段
 func (p *Parser) parseIntegerLiteral() ast.Expression {
-	defer untrace(trace("parseIntegerLiteral"))
+	//defer untrace(trace("parseIntegerLiteral"))
 	lit := &ast.IntegerLiteral{Token: p.curToken}
 
 	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
@@ -215,7 +215,7 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 
 // parsePrefixExpression 会调用p.nextToken()来前移词法单元，开始的时候p.curToken是前缀运算符，返回时指向前缀表达式的操作数
 func (p *Parser) parsePrefixExpression() ast.Expression {
-	defer untrace(trace("parsePrefixExpression"))
+	//defer untrace(trace("parsePrefixExpression"))
 	expression := &ast.PrefixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
@@ -229,7 +229,7 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 // parseInfixExpression 会调用p.nextToken()来前移词法单元，开始的时候p.curToken是中缀运算符，返回时指向中缀表达式的右操作数
 // 参数left是中缀表达式的左操作数
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
-	defer untrace(trace("parseInfixExpression"))
+	//defer untrace(trace("parseInfixExpression"))
 	expression := &ast.InfixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
