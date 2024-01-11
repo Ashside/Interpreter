@@ -21,6 +21,10 @@ func Eval(node ast.Node) object.Object {
 	case *ast.PrefixExpression:
 		right := Eval(node.Right)
 		return evalPrefixExpression(node.Operator, right)
+	case *ast.InfixExpression:
+		left := Eval(node.Left)
+		right := Eval(node.Right)
+		return evalInfixExpression(node.Operator, left, right)
 	//将表达式分解为Object
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
@@ -29,6 +33,52 @@ func Eval(node ast.Node) object.Object {
 	}
 
 	return nil
+}
+
+func evalInfixExpression(operator string, left object.Object, right object.Object) object.Object {
+	switch {
+	// 当进行两端都是整数时，调用 evalIntegerInfixExpression
+	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
+		return evalIntegerInfixExpression(operator, left, right)
+	// 当涉及比较时，两端是布尔值对象
+	// NOTE: 这里使用指针来判断是否成立是因为只有一个TRUE或者FALSE对象，比较指针即可。但是整数值不能这样比较
+	case operator == "==":
+		return nativeBoolToBooleanObject(left == right)
+	case operator == "!=":
+		return nativeBoolToBooleanObject(left != right)
+	default:
+		return NULL
+	}
+}
+
+func evalIntegerInfixExpression(operator string, left object.Object, right object.Object) object.Object {
+	leftValue := left.(*object.Integer).Value
+	rightValue := right.(*object.Integer).Value
+
+	switch operator {
+	// 整数运算
+	case "+":
+		return &object.Integer{Value: leftValue + rightValue}
+	case "-":
+		return &object.Integer{Value: leftValue - rightValue}
+	case "*":
+		return &object.Integer{Value: leftValue * rightValue}
+	case "/":
+		return &object.Integer{Value: leftValue / rightValue}
+
+	// 布尔运算
+	case "==":
+		return nativeBoolToBooleanObject(leftValue == rightValue)
+	case "!=":
+		return nativeBoolToBooleanObject(leftValue != rightValue)
+	case ">":
+		return nativeBoolToBooleanObject(leftValue > rightValue)
+	case "<":
+		return nativeBoolToBooleanObject(leftValue < rightValue)
+
+	default:
+		return NULL
+	}
 }
 
 func evalPrefixExpression(operator string, right object.Object) object.Object {
