@@ -12,6 +12,9 @@ type Object interface {
 
 const (
 	INTEGER_OBJ = "INTEGER"
+	BOOLEAN_OBJ = "BOOLEAN"
+
+	NULL_OBJ = "NULL"
 )
 
 // Integer 每当在源代码中遇到整数字面值时，需要先转换为ast.IntegerLiteral。在对该节点求值时，再将其转换为Object.Integer
@@ -25,4 +28,27 @@ func (i *Integer) Type() ObjectType {
 
 func (i *Integer) Inspect() string {
 	return fmt.Sprintf("%d", i.Value)
+}
+
+type Boolean struct {
+	Value bool
+}
+
+func (b *Boolean) Type() ObjectType {
+	return BOOLEAN_OBJ
+}
+
+func (b *Boolean) Inspect() string {
+	return fmt.Sprintf("%t", b.Value)
+}
+
+type Null struct {
+}
+
+func (n *Null) Type() ObjectType {
+	return NULL_OBJ
+}
+
+func (n *Null) Inspect() string {
+	return "null"
 }
