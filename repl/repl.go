@@ -1,6 +1,7 @@
 package repl
 
 import (
+	"Interp/evaluator"
 	"Interp/lexer"
 	"Interp/parser"
 	"bufio"
@@ -14,7 +15,10 @@ func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
 
 	for {
-		fmt.Fprintf(out, PROMPT)
+		_, err := fmt.Fprintf(out, PROMPT)
+		if err != nil {
+			return
+		}
 		scanned := scanner.Scan()
 		if !scanned {
 			return
@@ -30,14 +34,30 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		io.WriteString(out, program.String())
-		io.WriteString(out, "\n")
+		evaluated := evaluator.Eval(program)
+		if evaluated != nil {
+			_, err := io.WriteString(out, evaluated.Inspect())
+			if err != nil {
+				return
+			}
+			_, err = io.WriteString(out, "\n")
+			if err != nil {
+				return
+			}
+		}
+
 	}
 }
 
 func printParserErrors(out io.Writer, errors []string) {
-	io.WriteString(out, " parser errors:\n")
+	_, err := io.WriteString(out, " parser errors:\n")
+	if err != nil {
+		return
+	}
 	for _, msg := range errors {
-		io.WriteString(out, "\t"+msg+"\n")
+		_, err := io.WriteString(out, "\t"+msg+"\n")
+		if err != nil {
+			return
+		}
 	}
 }
