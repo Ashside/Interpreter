@@ -67,6 +67,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if len(args) == 1 && isError(args[0]) {
 			return args[0]
 		}
+		return applyFunction(function, args)
 	//将表达式分解为Object
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
@@ -76,6 +77,32 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	}
 
 	return nil
+}
+
+func applyFunction(fn object.Object, args []object.Object) object.Object {
+	function, ok := fn.(*object.Function)
+	if !ok {
+		return newError("not a function: %s", fn.Type())
+	}
+	extendEnv := extendFunctionEnv(function, args)
+	evaluated := Eval(function.Body, extendEnv)
+	return unwarpReturnValue(evaluated)
+}
+
+// unwarpReturnValue 解包返回值，避免return语句上浮阻止其他节点计算
+func unwarpReturnValue(obj object.Object) object.Object {
+	if returnValue, ok := obj.(*object.ReturnValue); ok {
+		return returnValue.Value
+	}
+	return obj
+}
+
+func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
+	env := object.NewEnclosedEnvironment(fn.Env)
+	for paramIdx, param := range fn.Parameters {
+		env.Set(param.Value, args[paramIdx])
+	}
+	return env
 }
 
 func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
