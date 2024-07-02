@@ -156,6 +156,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 }
 
 // test注释
+// rrr
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	//defer untrace(trace("parseExpressionStatement"))
 	stmt := &ast.ExpressionStatement{Token: p.curToken} //初始化一个表达式语句
